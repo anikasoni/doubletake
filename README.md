@@ -42,6 +42,8 @@ if it is missing when an ambiguous payment is processed.
 GEMINI_API_KEY=your-key-here
 ```
 
+Get a free key at https://aistudio.google.com/app/apikey — no billing required for the free tier.
+
 Start the API:
 
 ```
