@@ -1,5 +1,6 @@
 """FastAPI application entrypoint for doubletake."""
 
+import os
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -31,9 +32,16 @@ from scripts.seed_db import DEFAULT_CASE, seed_database  # noqa: E402
 app = FastAPI(title="doubletake")
 
 # Allow the Vite dev server (frontend/) to call this API from the browser.
+# In production, set ALLOWED_ORIGIN to a comma-separated list of frontend URLs
+# (e.g. "https://doubletake.up.railway.app") to add them without a code change.
+_allowed_origins = [
+    origin.strip()
+    for origin in os.getenv("ALLOWED_ORIGIN", "http://localhost:5173").split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
