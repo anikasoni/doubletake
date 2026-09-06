@@ -66,4 +66,43 @@
   .row-pending {
     border-left: 3px solid theme("colors.signal-pending");
   }
+
+  /* Ease the verdict change instead of snapping to it: the pending -> accepted
+     / rejected flip on the payment-detail worksheet after a payment is
+     processed, and the overview hero's load-in reveal. Cells are included so
+     the inherited text colour of a row dimming to rejected transitions too. */
+  .row-accepted,
+  .row-rejected,
+  .row-pending,
+  .row-accepted td,
+  .row-rejected td,
+  .row-pending td {
+    transition:
+      background-color 250ms ease,
+      border-color 250ms ease,
+      color 250ms ease,
+      opacity 250ms ease;
+  }
+
+  /* The overview hero (pages/Overview.tsx) runs one slower, orchestrated
+     reveal rather than the worksheet's quick flip. */
+  .landing-demo .row-accepted,
+  .landing-demo .row-rejected,
+  .landing-demo .row-pending,
+  .landing-demo .row-accepted td,
+  .landing-demo .row-rejected td,
+  .landing-demo .row-pending td {
+    transition-duration: 700ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row-accepted,
+  .row-rejected,
+  .row-pending,
+  .row-accepted td,
+  .row-rejected td,
+  .row-pending td {
+    transition-duration: 0ms;
+  }
 }
