@@ -2,12 +2,16 @@
 //
 // In development, requests go through the Vite proxy (see vite.config.ts):
 // "/api/payments" -> "http://localhost:8000/payments". Override the base by
-// setting VITE_API_BASE (e.g. "http://localhost:8000") to talk to the backend
-// directly; CORS is enabled server-side for http://localhost:5173.
+// setting VITE_API_BASE to talk to the backend directly:
+//   - "http://localhost:8000" for a local backend
+//   - "https://doubletake-backend.up.railway.app" for a deployed backend
+// When VITE_API_BASE is a full URL, fetch() requests go straight there and the
+// dev proxy is bypassed entirely. The server must allow the frontend origin via
+// CORS (see ALLOWED_ORIGIN in app/main.py). A trailing slash is tolerated.
 
 import type { Payment, PaymentDetail, ProcessResult } from "./types";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
+const API_BASE = (import.meta.env.VITE_API_BASE ?? "/api").replace(/\/$/, "");
 
 export class ApiError extends Error {
   readonly status: number;
