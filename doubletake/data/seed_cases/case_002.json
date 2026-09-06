@@ -1,0 +1,422 @@
+{
+  "customers": [
+    {
+      "customer_id": "CUST-05",
+      "expected_outcome": "resolved",
+      "expected_selected_invoice_id": "INV-501",
+      "expected_contradiction_found": false,
+      "notes": "clean single-candidate: one open invoice equals the payment exactly.",
+      "invoices": [
+        {
+          "id": "INV-501",
+          "customer_id": "CUST-05",
+          "amount": 30000.00,
+          "status": "open",
+          "issued_date": "2026-03-01"
+        }
+      ],
+      "credit_notes": [],
+      "payments": [
+        {
+          "id": "PAY-501",
+          "customer_id": "CUST-05",
+          "amount": 30000.00,
+          "received_date": "2026-03-20",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-501",
+          "payment_id": "PAY-501",
+          "referenced_invoice_id": "INV-501",
+          "referenced_credit_note_id": null,
+          "raw_text": "Remittance for PAY-501: settles INV-501 in full (30,000.00)."
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-06",
+      "expected_outcome": "resolved",
+      "expected_selected_invoice_id": "INV-601",
+      "expected_contradiction_found": false,
+      "notes": "clean single-candidate: a second open invoice exists but only INV-601 balances.",
+      "invoices": [
+        {
+          "id": "INV-601",
+          "customer_id": "CUST-06",
+          "amount": 75000.00,
+          "status": "open",
+          "issued_date": "2026-03-02"
+        },
+        {
+          "id": "INV-602",
+          "customer_id": "CUST-06",
+          "amount": 40000.00,
+          "status": "open",
+          "issued_date": "2026-03-02"
+        }
+      ],
+      "credit_notes": [],
+      "payments": [
+        {
+          "id": "PAY-601",
+          "customer_id": "CUST-06",
+          "amount": 75000.00,
+          "received_date": "2026-03-21",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-601",
+          "payment_id": "PAY-601",
+          "referenced_invoice_id": "INV-601",
+          "referenced_credit_note_id": null,
+          "raw_text": "Remittance for PAY-601: settles INV-601 in full (75,000.00)."
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-07",
+      "expected_outcome": "resolved",
+      "expected_selected_invoice_id": "INV-701",
+      "expected_contradiction_found": false,
+      "notes": "clean single-candidate: one open invoice equals the payment exactly.",
+      "invoices": [
+        {
+          "id": "INV-701",
+          "customer_id": "CUST-07",
+          "amount": 25000.00,
+          "status": "open",
+          "issued_date": "2026-03-03"
+        }
+      ],
+      "credit_notes": [],
+      "payments": [
+        {
+          "id": "PAY-701",
+          "customer_id": "CUST-07",
+          "amount": 25000.00,
+          "received_date": "2026-03-22",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-701",
+          "payment_id": "PAY-701",
+          "referenced_invoice_id": "INV-701",
+          "referenced_credit_note_id": null,
+          "raw_text": "Remittance for PAY-701: settles INV-701 in full (25,000.00)."
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-08",
+      "expected_outcome": "resolved",
+      "expected_selected_invoice_id": "INV-802",
+      "expected_contradiction_found": false,
+      "notes": "resolvable ambiguity: exact-amount vs invoice-minus-credit-note; remittance names the deduction candidate and CN-801 is still available.",
+      "invoices": [
+        {
+          "id": "INV-801",
+          "customer_id": "CUST-08",
+          "amount": 100000.00,
+          "status": "open",
+          "issued_date": "2026-03-04"
+        },
+        {
+          "id": "INV-802",
+          "customer_id": "CUST-08",
+          "amount": 102000.00,
+          "status": "open",
+          "issued_date": "2026-03-04"
+        }
+      ],
+      "credit_notes": [
+        {
+          "id": "CN-801",
+          "customer_id": "CUST-08",
+          "amount": 2000.00,
+          "linked_invoice_id": "INV-802",
+          "status": "available",
+          "consumed_by_invoice_id": null
+        }
+      ],
+      "payments": [
+        {
+          "id": "PAY-801",
+          "customer_id": "CUST-08",
+          "amount": 100000.00,
+          "received_date": "2026-03-23",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-801",
+          "payment_id": "PAY-801",
+          "referenced_invoice_id": "INV-802",
+          "referenced_credit_note_id": "CN-801",
+          "raw_text": "Remittance for PAY-801: INV-802 (102,000.00) less credit note CN-801 (2,000.00) = 100,000.00."
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-09",
+      "expected_outcome": "resolved",
+      "expected_selected_invoice_id": "INV-902",
+      "expected_contradiction_found": false,
+      "notes": "resolvable ambiguity: exact-amount vs invoice-minus-credit-note; remittance names the deduction candidate and CN-901 is still available.",
+      "invoices": [
+        {
+          "id": "INV-901",
+          "customer_id": "CUST-09",
+          "amount": 45000.00,
+          "status": "open",
+          "issued_date": "2026-03-05"
+        },
+        {
+          "id": "INV-902",
+          "customer_id": "CUST-09",
+          "amount": 47000.00,
+          "status": "open",
+          "issued_date": "2026-03-05"
+        }
+      ],
+      "credit_notes": [
+        {
+          "id": "CN-901",
+          "customer_id": "CUST-09",
+          "amount": 2000.00,
+          "linked_invoice_id": "INV-902",
+          "status": "available",
+          "consumed_by_invoice_id": null
+        }
+      ],
+      "payments": [
+        {
+          "id": "PAY-901",
+          "customer_id": "CUST-09",
+          "amount": 45000.00,
+          "received_date": "2026-03-24",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-901",
+          "payment_id": "PAY-901",
+          "referenced_invoice_id": "INV-902",
+          "referenced_credit_note_id": "CN-901",
+          "raw_text": "Remittance for PAY-901: INV-902 (47,000.00) less credit note CN-901 (2,000.00) = 45,000.00."
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-10",
+      "expected_outcome": "escalate",
+      "expected_selected_invoice_id": null,
+      "expected_contradiction_found": true,
+      "notes": "contradiction: remittance points at the deduction candidate but CN-1001 was already consumed by INV-1099.",
+      "invoices": [
+        {
+          "id": "INV-1001",
+          "customer_id": "CUST-10",
+          "amount": 60000.00,
+          "status": "open",
+          "issued_date": "2026-03-06"
+        },
+        {
+          "id": "INV-1002",
+          "customer_id": "CUST-10",
+          "amount": 63000.00,
+          "status": "open",
+          "issued_date": "2026-03-06"
+        }
+      ],
+      "credit_notes": [
+        {
+          "id": "CN-1001",
+          "customer_id": "CUST-10",
+          "amount": 3000.00,
+          "linked_invoice_id": "INV-1002",
+          "status": "consumed",
+          "consumed_by_invoice_id": "INV-1099"
+        }
+      ],
+      "payments": [
+        {
+          "id": "PAY-1001",
+          "customer_id": "CUST-10",
+          "amount": 60000.00,
+          "received_date": "2026-03-25",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-1001",
+          "payment_id": "PAY-1001",
+          "referenced_invoice_id": "INV-1002",
+          "referenced_credit_note_id": "CN-1001",
+          "raw_text": "Remittance for PAY-1001: INV-1002 (63,000.00) less credit note CN-1001 (3,000.00) = 60,000.00."
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-11",
+      "expected_outcome": "escalate",
+      "expected_selected_invoice_id": null,
+      "expected_contradiction_found": true,
+      "notes": "contradiction: remittance points at the deduction candidate but CN-1101 was already consumed by INV-1199.",
+      "invoices": [
+        {
+          "id": "INV-1101",
+          "customer_id": "CUST-11",
+          "amount": 80000.00,
+          "status": "open",
+          "issued_date": "2026-03-07"
+        },
+        {
+          "id": "INV-1102",
+          "customer_id": "CUST-11",
+          "amount": 85000.00,
+          "status": "open",
+          "issued_date": "2026-03-07"
+        }
+      ],
+      "credit_notes": [
+        {
+          "id": "CN-1101",
+          "customer_id": "CUST-11",
+          "amount": 5000.00,
+          "linked_invoice_id": "INV-1102",
+          "status": "consumed",
+          "consumed_by_invoice_id": "INV-1199"
+        }
+      ],
+      "payments": [
+        {
+          "id": "PAY-1101",
+          "customer_id": "CUST-11",
+          "amount": 80000.00,
+          "received_date": "2026-03-26",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-1101",
+          "payment_id": "PAY-1101",
+          "referenced_invoice_id": "INV-1102",
+          "referenced_credit_note_id": "CN-1101",
+          "raw_text": "Remittance for PAY-1101: INV-1102 (85,000.00) less credit note CN-1101 (5,000.00) = 80,000.00."
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-12",
+      "expected_outcome": "escalate",
+      "expected_selected_invoice_id": null,
+      "expected_contradiction_found": false,
+      "notes": "missing remittance: two balancing candidates and no remittance advice on file, so the intended invoice cannot be confirmed.",
+      "invoices": [
+        {
+          "id": "INV-1201",
+          "customer_id": "CUST-12",
+          "amount": 90000.00,
+          "status": "open",
+          "issued_date": "2026-03-08"
+        },
+        {
+          "id": "INV-1202",
+          "customer_id": "CUST-12",
+          "amount": 92000.00,
+          "status": "open",
+          "issued_date": "2026-03-08"
+        }
+      ],
+      "credit_notes": [
+        {
+          "id": "CN-1201",
+          "customer_id": "CUST-12",
+          "amount": 2000.00,
+          "linked_invoice_id": "INV-1202",
+          "status": "available",
+          "consumed_by_invoice_id": null
+        }
+      ],
+      "payments": [
+        {
+          "id": "PAY-1201",
+          "customer_id": "CUST-12",
+          "amount": 90000.00,
+          "received_date": "2026-03-27",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": []
+    },
+    {
+      "customer_id": "CUST-13",
+      "expected_outcome": "escalate",
+      "expected_selected_invoice_id": null,
+      "expected_contradiction_found": true,
+      "notes": "mismatched evidence: remittance references INV-1302 but cites CN-1301B, which is linked to an unrelated invoice, not to INV-1302 (INV-1302's real linked credit note is CN-1301A). The cited evidence does not support the referenced invoice.",
+      "invoices": [
+        {
+          "id": "INV-1301",
+          "customer_id": "CUST-13",
+          "amount": 100000.00,
+          "status": "open",
+          "issued_date": "2026-03-09"
+        },
+        {
+          "id": "INV-1302",
+          "customer_id": "CUST-13",
+          "amount": 102000.00,
+          "status": "open",
+          "issued_date": "2026-03-09"
+        }
+      ],
+      "credit_notes": [
+        {
+          "id": "CN-1301A",
+          "customer_id": "CUST-13",
+          "amount": 2000.00,
+          "linked_invoice_id": "INV-1302",
+          "status": "available",
+          "consumed_by_invoice_id": null
+        },
+        {
+          "id": "CN-1301B",
+          "customer_id": "CUST-13",
+          "amount": 2000.00,
+          "linked_invoice_id": "INV-8801",
+          "status": "available",
+          "consumed_by_invoice_id": null
+        }
+      ],
+      "payments": [
+        {
+          "id": "PAY-1301",
+          "customer_id": "CUST-13",
+          "amount": 100000.00,
+          "received_date": "2026-03-28",
+          "status": "unallocated"
+        }
+      ],
+      "remittance_advices": [
+        {
+          "id": "RA-1301",
+          "payment_id": "PAY-1301",
+          "referenced_invoice_id": "INV-1302",
+          "referenced_credit_note_id": "CN-1301B",
+          "raw_text": "Remittance for PAY-1301: INV-1302 (102,000.00) less credit note CN-1301B (2,000.00) = 100,000.00."
+        }
+      ]
+    }
+  ]
+}
