@@ -1,0 +1,134 @@
+{
+  "invoices": [
+    {
+      "id": "INV-101",
+      "customer_id": "CUST-01",
+      "amount": 50000.00,
+      "status": "open",
+      "issued_date": "2026-01-05"
+    },
+    {
+      "id": "INV-201",
+      "customer_id": "CUST-02",
+      "amount": 100000.00,
+      "status": "open",
+      "issued_date": "2026-01-06"
+    },
+    {
+      "id": "INV-202",
+      "customer_id": "CUST-02",
+      "amount": 102000.00,
+      "status": "open",
+      "issued_date": "2026-01-06"
+    },
+    {
+      "id": "INV-301",
+      "customer_id": "CUST-03",
+      "amount": 100000.00,
+      "status": "open",
+      "issued_date": "2026-01-07"
+    },
+    {
+      "id": "INV-302",
+      "customer_id": "CUST-03",
+      "amount": 102000.00,
+      "status": "open",
+      "issued_date": "2026-01-07"
+    },
+    {
+      "id": "INV-401",
+      "customer_id": "CUST-04",
+      "amount": 100000.00,
+      "status": "open",
+      "issued_date": "2026-01-08"
+    },
+    {
+      "id": "INV-402",
+      "customer_id": "CUST-04",
+      "amount": 102000.00,
+      "status": "open",
+      "issued_date": "2026-01-08"
+    }
+  ],
+  "credit_notes": [
+    {
+      "id": "CN-201",
+      "customer_id": "CUST-02",
+      "amount": 2000.00,
+      "linked_invoice_id": "INV-202",
+      "status": "available",
+      "consumed_by_invoice_id": null
+    },
+    {
+      "id": "CN-301",
+      "customer_id": "CUST-03",
+      "amount": 2000.00,
+      "linked_invoice_id": "INV-302",
+      "status": "consumed",
+      "consumed_by_invoice_id": "INV-999"
+    },
+    {
+      "id": "CN-401",
+      "customer_id": "CUST-04",
+      "amount": 2000.00,
+      "linked_invoice_id": "INV-402",
+      "status": "available",
+      "consumed_by_invoice_id": null
+    }
+  ],
+  "payments": [
+    {
+      "id": "PAY-101",
+      "customer_id": "CUST-01",
+      "amount": 50000.00,
+      "received_date": "2026-02-01",
+      "status": "unallocated"
+    },
+    {
+      "id": "PAY-201",
+      "customer_id": "CUST-02",
+      "amount": 100000.00,
+      "received_date": "2026-02-02",
+      "status": "unallocated"
+    },
+    {
+      "id": "PAY-301",
+      "customer_id": "CUST-03",
+      "amount": 100000.00,
+      "received_date": "2026-02-03",
+      "status": "unallocated"
+    },
+    {
+      "id": "PAY-401",
+      "customer_id": "CUST-04",
+      "amount": 100000.00,
+      "received_date": "2026-02-04",
+      "status": "unallocated"
+    }
+  ],
+  "remittance_advices": [
+    {
+      "id": "RA-101",
+      "payment_id": "PAY-101",
+      "referenced_invoice_id": "INV-101",
+      "referenced_credit_note_id": null,
+      "raw_text": "Remittance for PAY-101: settles INV-101 in full (50,000.00)."
+    },
+    {
+      "id": "RA-201",
+      "payment_id": "PAY-201",
+      "referenced_invoice_id": "INV-202",
+      "referenced_credit_note_id": "CN-201",
+      "raw_text": "Remittance for PAY-201: INV-202 (102,000.00) less credit note CN-201 (2,000.00) = 100,000.00."
+    },
+    {
+      "id": "RA-301",
+      "payment_id": "PAY-301",
+      "referenced_invoice_id": "INV-302",
+      "referenced_credit_note_id": "CN-301",
+      "raw_text": "Remittance for PAY-301: INV-302 (102,000.00) less credit note CN-301 (2,000.00) = 100,000.00."
+    }
+  ],
+  "allocations": [],
+  "review_cases": []
+}
