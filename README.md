@@ -290,7 +290,7 @@ Processing returns `outcome: allocated` or `under_review`; the investigator and 
 
 ## Built with AO
 
-![Agent Orchestrator board for DoubleTake, showing task sessions and isolated worktree branches](docs/assets/ao-build-board.png)
+![Agent Orchestrator board for DoubleTake, showing task sessions and isolated worktree branches](ao-build-board.png)
 
 *Team-provided AO workspace capture: the Building column shows 11 tasks at the time of capture, with one item in Archive. These are board counts at that moment, not a verified total of completed sessions. Individual cards show their worktree branches; the merged PRs below establish the resulting implementation history.*
 
