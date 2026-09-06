@@ -35,6 +35,9 @@ from app.investigator import (
 )
 
 CASE_PATH = Path(__file__).resolve().parents[1] / "data" / "seed_cases" / "case_001.json"
+CASE_002_PATH = (
+    Path(__file__).resolve().parents[1] / "data" / "seed_cases" / "case_002.json"
+)
 
 _DATE_FIELDS = {"issued_date", "received_date"}
 
@@ -103,6 +106,23 @@ def _payment_and_candidates(session, payment_id: str):
     invoices = session.query(models.Invoice).all()
     credit_notes = session.query(models.CreditNote).all()
     return payment, generate_candidates(payment, invoices, credit_notes)
+
+
+def _seed_customer_block(block: dict):
+    """Seed a fresh in-memory DB from a single ``case_002.json`` customer block."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    session = sessionmaker(bind=engine)()
+    for row in block.get("invoices", []):
+        session.add(models.Invoice(**_coerce(row)))
+    for row in block.get("credit_notes", []):
+        session.add(models.CreditNote(**_coerce(row)))
+    for row in block.get("payments", []):
+        session.add(models.Payment(**_coerce(row)))
+    for row in block.get("remittance_advices", []):
+        session.add(models.RemittanceAdvice(**_coerce(row)))
+    session.commit()
+    return session
 
 
 # --------------------------------------------------------------------------- #
@@ -215,6 +235,61 @@ def test_escalates_without_contradiction_when_remittance_names_non_candidate(
     assert evidence_types == ["remittance_advice"]
     assert result.evidence_checked[0]["found"] is True
     assert result.evidence_checked[0]["referenced_invoice_id"] == "INV-999"
+
+
+def test_escalates_with_contradiction_when_remittance_cites_mismatched_credit_note(
+    anthropic_stub,
+):
+    """CUST-13 from case_002.json: the remittance references INV-1302 but cites
+    CN-1301B, a credit note linked to an unrelated invoice rather than to
+    INV-1302 (whose real linked note is CN-1301A). The cited evidence does not
+    support the referenced invoice, so the case escalates as a contradiction
+    instead of silently allocating against CN-1301A.
+    """
+    with open(CASE_002_PATH, "r", encoding="utf-8") as fh:
+        case_002 = json.load(fh)
+    block = next(
+        b for b in case_002["customers"] if b["customer_id"] == "CUST-13"
+    )
+
+    anthropic_stub["text"] = (
+        "The remittance cited credit note CN-1301B, which does not match "
+        "CN-1301A, the credit note actually linked to candidate invoice "
+        "INV-1302, so the referenced evidence does not support the referenced "
+        "invoice and the case is escalated."
+    )
+
+    session = _seed_customer_block(block)
+    try:
+        payment, candidates = _payment_and_candidates(session, "PAY-1301")
+        assert len(candidates) > 1
+
+        result = investigate(payment, candidates, session)
+    finally:
+        session.close()
+
+    assert result.status == "escalate"
+    assert result.selected_invoice_id is None
+    assert result.contradiction_found is True
+    assert len(anthropic_stub["calls"]) == 1
+
+    # The deterministic outcome must surface both credit note IDs -- the one the
+    # remittance cited and the one actually linked to the candidate -- to the
+    # rationale writer, and the resulting rationale names them.
+    facts = anthropic_stub["calls"][0]["messages"][0]["content"]
+    assert "CN-1301B" in facts  # cited by the remittance
+    assert "CN-1301A" in facts  # actually linked to the candidate invoice
+    assert "CN-1301B" in result.decision_rationale
+    assert "CN-1301A" in result.decision_rationale
+
+    cn_evidence = next(
+        e
+        for e in result.evidence_checked
+        if e["evidence_type"] == "credit_note_status"
+    )
+    assert cn_evidence["credit_note_id"] == "CN-1301B"
+    assert cn_evidence["status"] is None
+    assert "CN-1301A" in cn_evidence["detail"]
 
 
 # --------------------------------------------------------------------------- #

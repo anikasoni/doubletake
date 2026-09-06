@@ -255,15 +255,51 @@ def investigate(
     # prefer the deduction candidate carrying that note; otherwise prefer the
     # plain exact-amount match. Falls back to the first match for determinism.
     selected = None
-    if remittance.referenced_credit_note_id:
+    cited_credit_note_id = remittance.referenced_credit_note_id
+    if cited_credit_note_id:
         selected = next(
-            (
-                c
-                for c in matches
-                if c.credit_note_id == remittance.referenced_credit_note_id
-            ),
+            (c for c in matches if c.credit_note_id == cited_credit_note_id),
             None,
         )
+        if selected is None:
+            # The remittance names a specific credit note, but no candidate for
+            # the referenced invoice is actually linked to it. If that invoice
+            # only balances via a deduction against a *different* credit note,
+            # the cited evidence does not support the referenced invoice -- a
+            # proven ledger contradiction, not a licence to silently fall back
+            # to another candidate.
+            deduction_match = next(
+                (
+                    c
+                    for c in matches
+                    if c.match_type == "invoice_minus_credit_note"
+                ),
+                None,
+            )
+            if deduction_match is not None:
+                evidence_checked.append(
+                    {
+                        "evidence_type": "credit_note_status",
+                        "credit_note_id": cited_credit_note_id,
+                        "status": None,
+                        "consumed_by_invoice_id": None,
+                        "detail": (
+                            f"remittance cites credit note "
+                            f"{cited_credit_note_id}, but candidate invoice "
+                            f"{deduction_match.invoice_id} is linked to credit "
+                            f"note {deduction_match.credit_note_id}"
+                        ),
+                    }
+                )
+                outcome = {
+                    "status": "escalate",
+                    "selected_invoice_id": None,
+                    "contradiction_found": True,
+                    "reason": "remittance_credit_note_does_not_match_candidate",
+                    "cited_credit_note_id": cited_credit_note_id,
+                    "candidate_credit_note_id": deduction_match.credit_note_id,
+                }
+                return _finish(payment, candidates, evidence_checked, outcome)
     if selected is None:
         selected = next(
             (c for c in matches if c.match_type == "exact_amount"), matches[0]

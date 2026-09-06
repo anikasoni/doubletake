@@ -1,0 +1,14 @@
+customer_id,payment_id,expected_outcome,actual_outcome,expected_selected_invoice_id,actual_selected_invoice_id,expected_contradiction_found,actual_contradiction_found,correct
+CUST-01,PAY-101,resolved,resolved,INV-101,INV-101,False,False,True
+CUST-02,PAY-201,resolved,resolved,INV-202,INV-202,False,False,True
+CUST-03,PAY-301,escalate,escalate,,,True,True,True
+CUST-04,PAY-401,escalate,escalate,,,False,False,True
+CUST-05,PAY-501,resolved,resolved,INV-501,INV-501,False,False,True
+CUST-06,PAY-601,resolved,resolved,INV-601,INV-601,False,False,True
+CUST-07,PAY-701,resolved,resolved,INV-701,INV-701,False,False,True
+CUST-08,PAY-801,resolved,resolved,INV-802,INV-802,False,False,True
+CUST-09,PAY-901,resolved,resolved,INV-902,INV-902,False,False,True
+CUST-10,PAY-1001,escalate,escalate,,,True,True,True
+CUST-11,PAY-1101,escalate,escalate,,,True,True,True
+CUST-12,PAY-1201,escalate,escalate,,,False,False,True
+CUST-13,PAY-1301,escalate,escalate,,,True,True,True
