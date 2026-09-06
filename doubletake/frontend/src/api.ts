@@ -5,7 +5,7 @@
 // setting VITE_API_BASE (e.g. "http://localhost:8000") to talk to the backend
 // directly; CORS is enabled server-side for http://localhost:5173.
 
-import type { Payment, ProcessResult } from "./types";
+import type { Payment, PaymentDetail, ProcessResult } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "/api";
 
@@ -52,9 +52,9 @@ export function getPayments(): Promise<Payment[]> {
   return request<Payment[]>("/payments");
 }
 
-/** GET /payments/{id} — fetch a single payment. */
-export function getPayment(id: string): Promise<Payment> {
-  return request<Payment>(`/payments/${encodeURIComponent(id)}`);
+/** GET /payments/{id} — payment plus full investigation detail once processed. */
+export function getPayment(id: string): Promise<PaymentDetail> {
+  return request<PaymentDetail>(`/payments/${encodeURIComponent(id)}`);
 }
 
 /** POST /payments/{id}/process — run the allocation workflow for one payment. */

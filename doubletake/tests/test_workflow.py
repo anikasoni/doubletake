@@ -11,7 +11,7 @@ a different branch of the workflow against a real (in-memory) database:
 * CUST-04 / PAY-401 -- two candidates but no remittance advice on file ->
   investigation ``escalate`` on missing evidence (no contradiction).
 
-The single Anthropic call the investigator makes is stubbed; no live API is hit.
+The single Gemini call the investigator makes is stubbed; no live API is hit.
 """
 
 import json
@@ -70,21 +70,28 @@ def db_session(case):
 
 
 @pytest.fixture
-def anthropic_stub(monkeypatch):
-    """Replace ``anthropic.Anthropic`` with a fake returning a fixed string."""
+def gemini_stub(monkeypatch):
+    """Replace ``genai.GenerativeModel`` with a fake returning a fixed string."""
     state = {"text": "Deterministic outcome; rationale placeholder.", "calls": []}
 
-    class _FakeMessages:
-        def create(self, **kwargs):
-            state["calls"].append(kwargs)
-            block = SimpleNamespace(type="text", text=state["text"])
-            return SimpleNamespace(content=[block])
+    class _FakeModel:
+        def __init__(self, model_name, *, system_instruction=None, **kwargs):
+            self._model_name = model_name
+            self._system_instruction = system_instruction
 
-    class _FakeClient:
-        def __init__(self, *args, **kwargs):
-            self.messages = _FakeMessages()
+        def generate_content(self, contents, **kwargs):
+            state["calls"].append(
+                {
+                    "model": self._model_name,
+                    "system_instruction": self._system_instruction,
+                    "contents": contents,
+                    "kwargs": kwargs,
+                }
+            )
+            return SimpleNamespace(text=state["text"])
 
-    monkeypatch.setattr(investigator.anthropic, "Anthropic", _FakeClient)
+    monkeypatch.setattr(investigator.genai, "configure", lambda **kwargs: None)
+    monkeypatch.setattr(investigator.genai, "GenerativeModel", _FakeModel)
     return state
 
 
@@ -93,16 +100,17 @@ def anthropic_stub(monkeypatch):
 # --------------------------------------------------------------------------- #
 
 
-def test_cust01_single_candidate_applies_directly(db_session, anthropic_stub):
+def test_cust01_single_candidate_applies_directly(db_session, gemini_stub):
     summary = process_payment("PAY-101", db_session)
 
     assert summary["path"] == "single_candidate"
     assert summary["outcome"] == "allocated"
     assert summary["candidate_count"] == 1
     assert summary["selected_invoice_id"] == "INV-101"
+    assert [c["invoice_id"] for c in summary["competing_candidates"]] == ["INV-101"]
     assert summary["investigation"] is None
-    # No ambiguity -> the investigator (and its Anthropic call) never runs.
-    assert anthropic_stub["calls"] == []
+    # No ambiguity -> the investigator (and its Gemini call) never runs.
+    assert gemini_stub["calls"] == []
 
     allocation = db_session.get(models.Allocation, summary["allocation_id"])
     assert allocation is not None
@@ -120,8 +128,8 @@ def test_cust01_single_candidate_applies_directly(db_session, anthropic_stub):
 # --------------------------------------------------------------------------- #
 
 
-def test_cust02_resolves_via_investigation(db_session, anthropic_stub):
-    anthropic_stub["text"] = (
+def test_cust02_resolves_via_investigation(db_session, gemini_stub):
+    gemini_stub["text"] = (
         "The remittance advice names the invoice-minus-credit-note candidate and "
         "the cited credit note is still available, so the payment is allocated."
     )
@@ -132,14 +140,18 @@ def test_cust02_resolves_via_investigation(db_session, anthropic_stub):
     assert summary["outcome"] == "allocated"
     assert summary["candidate_count"] == 2
     assert summary["selected_invoice_id"] == "INV-202"
+    assert [c["invoice_id"] for c in summary["competing_candidates"]] == [
+        "INV-201",
+        "INV-202",
+    ]
     assert summary["investigation"]["status"] == "resolved"
     assert summary["investigation"]["contradiction_found"] is False
-    assert len(anthropic_stub["calls"]) == 1
+    assert len(gemini_stub["calls"]) == 1
 
     allocation = db_session.get(models.Allocation, summary["allocation_id"])
     assert allocation.invoice_id == "INV-202"
     assert allocation.status is models.AllocationStatus.applied
-    assert allocation.decision_rationale == anthropic_stub["text"]
+    assert allocation.decision_rationale == gemini_stub["text"]
     evidence_types = [e["evidence_type"] for e in allocation.evidence_used]
     assert evidence_types == ["remittance_advice", "credit_note_status"]
 
@@ -153,8 +165,8 @@ def test_cust02_resolves_via_investigation(db_session, anthropic_stub):
 # --------------------------------------------------------------------------- #
 
 
-def test_cust03_escalates_with_contradiction(db_session, anthropic_stub):
-    anthropic_stub["text"] = (
+def test_cust03_escalates_with_contradiction(db_session, gemini_stub):
+    gemini_stub["text"] = (
         "The remittance relies on a credit note that was already consumed by "
         "another invoice, so the case is escalated."
     )
@@ -167,13 +179,17 @@ def test_cust03_escalates_with_contradiction(db_session, anthropic_stub):
     assert summary["allocation_id"] is None
     assert summary["investigation"]["status"] == "escalate"
     assert summary["investigation"]["contradiction_found"] is True
-    assert len(anthropic_stub["calls"]) == 1
+    assert [c["invoice_id"] for c in summary["competing_candidates"]] == [
+        "INV-301",
+        "INV-302",
+    ]
+    assert len(gemini_stub["calls"]) == 1
 
     review = db_session.get(models.ReviewCase, summary["review_case_id"])
     assert review is not None
     assert review.payment_id == "PAY-301"
     assert review.contradiction_found is True
-    assert review.decision_rationale == anthropic_stub["text"]
+    assert review.decision_rationale == gemini_stub["text"]
     assert [c["invoice_id"] for c in review.competing_candidates] == [
         "INV-301",
         "INV-302",
@@ -191,8 +207,8 @@ def test_cust03_escalates_with_contradiction(db_session, anthropic_stub):
 # --------------------------------------------------------------------------- #
 
 
-def test_cust04_escalates_on_missing_evidence(db_session, anthropic_stub):
-    anthropic_stub["text"] = (
+def test_cust04_escalates_on_missing_evidence(db_session, gemini_stub):
+    gemini_stub["text"] = (
         "There is a missing remittance advice for this payment, so the intended "
         "invoice cannot be confirmed and the case is escalated."
     )
@@ -204,7 +220,11 @@ def test_cust04_escalates_on_missing_evidence(db_session, anthropic_stub):
     assert summary["selected_invoice_id"] is None
     assert summary["investigation"]["status"] == "escalate"
     assert summary["investigation"]["contradiction_found"] is False
-    assert len(anthropic_stub["calls"]) == 1
+    assert [c["invoice_id"] for c in summary["competing_candidates"]] == [
+        "INV-401",
+        "INV-402",
+    ]
+    assert len(gemini_stub["calls"]) == 1
 
     review = db_session.get(models.ReviewCase, summary["review_case_id"])
     assert review.payment_id == "PAY-401"
@@ -225,7 +245,7 @@ def test_cust04_escalates_on_missing_evidence(db_session, anthropic_stub):
 # --------------------------------------------------------------------------- #
 
 
-def test_no_candidates_opens_review_case(db_session, anthropic_stub):
+def test_no_candidates_opens_review_case(db_session, gemini_stub):
     # Nudge the payment so it no longer matches any open invoice for CUST-01.
     payment = db_session.get(models.Payment, "PAY-101")
     payment.amount = 12345.67
@@ -236,9 +256,10 @@ def test_no_candidates_opens_review_case(db_session, anthropic_stub):
     assert summary["path"] == "no_candidates"
     assert summary["outcome"] == "under_review"
     assert summary["candidate_count"] == 0
+    assert summary["competing_candidates"] == []
     assert summary["allocation_id"] is None
     assert summary["investigation"] is None
-    assert anthropic_stub["calls"] == []
+    assert gemini_stub["calls"] == []
 
     review = db_session.get(models.ReviewCase, summary["review_case_id"])
     assert review.reason == "no balancing invoice found"

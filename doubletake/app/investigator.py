@@ -6,9 +6,9 @@ before it can be applied.  This module runs that investigation.
 
 **Every decision here is deterministic.**  Which invoice (if any) is selected,
 whether the case resolves or escalates, and whether a contradiction was found are
-all decided by plain Python from ledger evidence.  The Anthropic API is called
-exactly once, at the very end, and only to phrase ``decision_rationale`` in
-English -- it is given the already-made outcome and must not change it.
+all decided by plain Python from ledger evidence.  The Google Gemini API is
+called exactly once, at the very end, and only to phrase ``decision_rationale``
+in English -- it is given the already-made outcome and must not change it.
 
 Investigation should only be run when ``len(candidates) > 1``; a single candidate
 is unambiguous and :func:`investigate` rejects that input.
@@ -17,19 +17,26 @@ is unambiguous and :func:`investigate` rejects that input.
 from __future__ import annotations
 
 import json
+import os
 from typing import Literal
 
-import anthropic
+import google.generativeai as genai
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from app.candidates import Candidate
 from app.models import CreditNote, RemittanceAdvice
 
-# Load ANTHROPIC_API_KEY (and anything else in .env) on import.
+# Load GEMINI_API_KEY (and anything else in .env) on import.
 load_dotenv()
 
-RATIONALE_MODEL = "claude-sonnet-4-6"
+# Fast, cheap, non-reasoning tier -- this call only rephrases already-decided
+# facts into a sentence, so the "flash-lite" model is a good fit and it does not
+# spend the output budget on hidden thinking tokens the way "flash" does. The
+# "-latest" alias tracks the current version so the demo does not break when a
+# specific one is retired; pin to a dated model (e.g. "gemini-3.6-flash") for
+# reproducible eval runs.
+RATIONALE_MODEL = "gemini-flash-lite-latest"
 
 # The rationale writer summarises supplied facts only.  It never decides the
 # outcome and must not invent identifiers or amounts.
@@ -129,37 +136,30 @@ def generate_rationale(
     evidence_checked: list[dict],
     outcome: dict,
 ) -> str:
-    """Make the single Anthropic call that phrases ``decision_rationale``.
+    """Make the single Google Gemini call that phrases ``decision_rationale``.
 
     The model is handed the candidates, the evidence gathered and the outcome
     that deterministic logic already reached; it only turns those facts into a
     sentence or two.
     """
-    client = anthropic.Anthropic()
+    genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
     facts = {
         "payment_id": getattr(payment, "id", None),
         "candidates": [_candidate_dict(c) for c in candidates],
         "evidence_checked": evidence_checked,
         "outcome": outcome,
     }
-    response = client.messages.create(
-        model=RATIONALE_MODEL,
-        max_tokens=300,
-        system=_RATIONALE_SYSTEM,
-        messages=[
-            {
-                "role": "user",
-                "content": (
-                    "Facts (JSON):\n"
-                    + json.dumps(facts, indent=2, sort_keys=True, default=str)
-                    + "\n\nWrite the rationale."
-                ),
-            }
-        ],
+    model = genai.GenerativeModel(
+        RATIONALE_MODEL,
+        system_instruction=_RATIONALE_SYSTEM,
     )
-    return "".join(
-        block.text for block in response.content if block.type == "text"
-    ).strip()
+    response = model.generate_content(
+        "Facts (JSON):\n"
+        + json.dumps(facts, indent=2, sort_keys=True, default=str)
+        + "\n\nWrite the rationale.",
+        generation_config={"max_output_tokens": 512},
+    )
+    return response.text.strip()
 
 
 def _finish(

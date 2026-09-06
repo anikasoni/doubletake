@@ -11,7 +11,7 @@ against a real (in-memory) database:
 * CUST-04 / PAY-401 -- missing evidence: no remittance advice on file ->
   ``escalate``.
 
-The Anthropic call is stubbed to return a fixed string; no live API is hit.
+The Gemini call is stubbed to return a fixed string; no live API is hit.
 """
 
 import json
@@ -79,25 +79,33 @@ def db_session(case):
 
 
 @pytest.fixture
-def anthropic_stub(monkeypatch):
-    """Replace ``anthropic.Anthropic`` with a fake that returns a fixed string.
+def gemini_stub(monkeypatch):
+    """Replace ``genai.GenerativeModel`` with a fake that returns a fixed string.
 
     The test sets ``state["text"]`` to control the rationale and reads
-    ``state["calls"]`` to assert exactly one call was made.
+    ``state["calls"]`` to assert exactly one call was made. Each recorded call is
+    ``{"model", "system_instruction", "contents", "kwargs"}``.
     """
     state = {"text": "Deterministic outcome; rationale placeholder.", "calls": []}
 
-    class _FakeMessages:
-        def create(self, **kwargs):
-            state["calls"].append(kwargs)
-            block = SimpleNamespace(type="text", text=state["text"])
-            return SimpleNamespace(content=[block])
+    class _FakeModel:
+        def __init__(self, model_name, *, system_instruction=None, **kwargs):
+            self._model_name = model_name
+            self._system_instruction = system_instruction
 
-    class _FakeClient:
-        def __init__(self, *args, **kwargs):
-            self.messages = _FakeMessages()
+        def generate_content(self, contents, **kwargs):
+            state["calls"].append(
+                {
+                    "model": self._model_name,
+                    "system_instruction": self._system_instruction,
+                    "contents": contents,
+                    "kwargs": kwargs,
+                }
+            )
+            return SimpleNamespace(text=state["text"])
 
-    monkeypatch.setattr(investigator.anthropic, "Anthropic", _FakeClient)
+    monkeypatch.setattr(investigator.genai, "configure", lambda **kwargs: None)
+    monkeypatch.setattr(investigator.genai, "GenerativeModel", _FakeModel)
     return state
 
 
@@ -130,8 +138,8 @@ def _seed_customer_block(block: dict):
 # --------------------------------------------------------------------------- #
 
 
-def test_cust02_resolves_to_inv202(db_session, anthropic_stub):
-    anthropic_stub["text"] = (
+def test_cust02_resolves_to_inv202(db_session, gemini_stub):
+    gemini_stub["text"] = (
         "The remittance advice names the invoice-minus-credit-note candidate and "
         "the cited credit note is still available, so the payment is allocated."
     )
@@ -143,8 +151,8 @@ def test_cust02_resolves_to_inv202(db_session, anthropic_stub):
     assert result.status == "resolved"
     assert result.selected_invoice_id == "INV-202"
     assert result.contradiction_found is False
-    assert len(anthropic_stub["calls"]) == 1
-    assert anthropic_stub["calls"][0]["model"] == "claude-sonnet-4-6"
+    assert len(gemini_stub["calls"]) == 1
+    assert gemini_stub["calls"][0]["model"] == investigator.RATIONALE_MODEL
 
     evidence_types = [e["evidence_type"] for e in result.evidence_checked]
     assert evidence_types == ["remittance_advice", "credit_note_status"]
@@ -153,8 +161,8 @@ def test_cust02_resolves_to_inv202(db_session, anthropic_stub):
     assert cn_evidence["status"] == "available"
 
 
-def test_cust03_escalates_on_consumed_credit_note(db_session, anthropic_stub):
-    anthropic_stub["text"] = (
+def test_cust03_escalates_on_consumed_credit_note(db_session, gemini_stub):
+    gemini_stub["text"] = (
         "The remittance relies on a credit note that was already consumed by "
         "another invoice; because the consumed credit note cannot be reused, the "
         "case is escalated."
@@ -168,7 +176,7 @@ def test_cust03_escalates_on_consumed_credit_note(db_session, anthropic_stub):
     assert result.selected_invoice_id is None
     assert result.contradiction_found is True
     assert "consumed credit note" in result.decision_rationale.lower()
-    assert len(anthropic_stub["calls"]) == 1
+    assert len(gemini_stub["calls"]) == 1
 
     cn_evidence = next(
         e for e in result.evidence_checked if e["evidence_type"] == "credit_note_status"
@@ -178,8 +186,8 @@ def test_cust03_escalates_on_consumed_credit_note(db_session, anthropic_stub):
     assert cn_evidence["consumed_by_invoice_id"] == "INV-999"
 
 
-def test_cust04_escalates_on_missing_remittance(db_session, anthropic_stub):
-    anthropic_stub["text"] = (
+def test_cust04_escalates_on_missing_remittance(db_session, gemini_stub):
+    gemini_stub["text"] = (
         "There is a missing remittance advice for this payment, so the intended "
         "invoice cannot be confirmed and the case is escalated."
     )
@@ -192,7 +200,7 @@ def test_cust04_escalates_on_missing_remittance(db_session, anthropic_stub):
     assert result.selected_invoice_id is None
     assert result.contradiction_found is False
     assert "missing remittance" in result.decision_rationale.lower()
-    assert len(anthropic_stub["calls"]) == 1
+    assert len(gemini_stub["calls"]) == 1
 
     assert len(result.evidence_checked) == 1
     ra_evidence = result.evidence_checked[0]
@@ -201,7 +209,7 @@ def test_cust04_escalates_on_missing_remittance(db_session, anthropic_stub):
 
 
 def test_escalates_without_contradiction_when_remittance_names_non_candidate(
-    db_session, anthropic_stub
+    db_session, gemini_stub
 ):
     # PAY-401 has candidates INV-401 / INV-402; point its remittance at an
     # invoice that is not a candidate at all.
@@ -216,7 +224,7 @@ def test_escalates_without_contradiction_when_remittance_names_non_candidate(
     )
     db_session.commit()
 
-    anthropic_stub["text"] = (
+    gemini_stub["text"] = (
         "The remittance advice names an invoice that is not one of the balancing "
         "candidates, so the intended allocation cannot be confirmed and the case "
         "is escalated."
@@ -229,7 +237,7 @@ def test_escalates_without_contradiction_when_remittance_names_non_candidate(
     assert result.status == "escalate"
     assert result.selected_invoice_id is None
     assert result.contradiction_found is False
-    assert len(anthropic_stub["calls"]) == 1
+    assert len(gemini_stub["calls"]) == 1
 
     evidence_types = [e["evidence_type"] for e in result.evidence_checked]
     assert evidence_types == ["remittance_advice"]
@@ -238,7 +246,7 @@ def test_escalates_without_contradiction_when_remittance_names_non_candidate(
 
 
 def test_escalates_with_contradiction_when_remittance_cites_mismatched_credit_note(
-    anthropic_stub,
+    gemini_stub,
 ):
     """CUST-13 from case_002.json: the remittance references INV-1302 but cites
     CN-1301B, a credit note linked to an unrelated invoice rather than to
@@ -252,7 +260,7 @@ def test_escalates_with_contradiction_when_remittance_cites_mismatched_credit_no
         b for b in case_002["customers"] if b["customer_id"] == "CUST-13"
     )
 
-    anthropic_stub["text"] = (
+    gemini_stub["text"] = (
         "The remittance cited credit note CN-1301B, which does not match "
         "CN-1301A, the credit note actually linked to candidate invoice "
         "INV-1302, so the referenced evidence does not support the referenced "
@@ -271,12 +279,12 @@ def test_escalates_with_contradiction_when_remittance_cites_mismatched_credit_no
     assert result.status == "escalate"
     assert result.selected_invoice_id is None
     assert result.contradiction_found is True
-    assert len(anthropic_stub["calls"]) == 1
+    assert len(gemini_stub["calls"]) == 1
 
     # The deterministic outcome must surface both credit note IDs -- the one the
     # remittance cited and the one actually linked to the candidate -- to the
     # rationale writer, and the resulting rationale names them.
-    facts = anthropic_stub["calls"][0]["messages"][0]["content"]
+    facts = gemini_stub["calls"][0]["contents"]
     assert "CN-1301B" in facts  # cited by the remittance
     assert "CN-1301A" in facts  # actually linked to the candidate invoice
     assert "CN-1301B" in result.decision_rationale
@@ -333,9 +341,9 @@ def test_check_credit_note_status(db_session):
     assert missing["status"] is None
 
 
-def test_investigate_rejects_single_candidate(db_session, anthropic_stub):
+def test_investigate_rejects_single_candidate(db_session, gemini_stub):
     payment, candidates = _payment_and_candidates(db_session, "PAY-101")
     assert len(candidates) == 1
     with pytest.raises(ValueError):
         investigate(payment, candidates, db_session)
-    assert anthropic_stub["calls"] == []
+    assert gemini_stub["calls"] == []
