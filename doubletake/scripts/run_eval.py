@@ -5,7 +5,7 @@ Loads every labelled customer in ``data/seed_cases/case_001.json`` and
 in-memory SQLite database, runs :func:`app.workflow.process_payment` for every
 payment, and scores the actual outcome against the label carried by each case.
 
-The only network call the workflow makes -- the single Anthropic request the
+The only network call the workflow makes -- the single Gemini request the
 investigator uses to phrase its rationale -- is monkeypatched with a fixed
 string, so this script runs with no API key and no live traffic.
 
@@ -83,15 +83,20 @@ CASE_001_EXPECTATIONS = {
 }
 
 
-class _FakeMessages:
-    def create(self, **kwargs):
-        block = SimpleNamespace(type="text", text=STUB_RATIONALE)
-        return SimpleNamespace(content=[block])
+class _FakeModel:
+    """Stand-in for ``genai.GenerativeModel`` that returns a fixed rationale.
 
+    Mirrors the ``gemini_stub`` fixture in ``tests/test_investigator.py`` and
+    ``tests/test_workflow.py`` so the eval exercises the real Gemini-based
+    ``investigator.investigate`` without any API key or live traffic.
+    """
 
-class _FakeAnthropic:
-    def __init__(self, *args, **kwargs):
-        self.messages = _FakeMessages()
+    def __init__(self, model_name, *, system_instruction=None, **kwargs):
+        self._model_name = model_name
+        self._system_instruction = system_instruction
+
+    def generate_content(self, contents, **kwargs):
+        return SimpleNamespace(text=STUB_RATIONALE)
 
 
 def _coerce(row: dict) -> dict:
@@ -165,7 +170,8 @@ def _pct(numerator: int, denominator: int) -> str:
 
 
 def run_eval() -> dict:
-    investigator.anthropic.Anthropic = _FakeAnthropic
+    investigator.genai.configure = lambda **kwargs: None
+    investigator.genai.GenerativeModel = _FakeModel
 
     rows_by_section, order, expectations = _load_cases()
     session = _build_session()
