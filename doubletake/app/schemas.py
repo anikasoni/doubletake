@@ -67,5 +67,7 @@ class ReviewCaseSchema(ORMModel):
     payment_id: str
     competing_candidates: list
     reason: str
+    decision_rationale: str
+    contradiction_found: bool
     status: ReviewCaseStatus
     created_at: datetime

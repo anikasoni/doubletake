@@ -4,7 +4,7 @@ import enum
 from datetime import date, datetime
 from decimal import Decimal
 
-from sqlalchemy import JSON, Date, DateTime, Enum, Numeric, String, Text
+from sqlalchemy import JSON, Boolean, Date, DateTime, Enum, Numeric, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -112,6 +112,14 @@ class ReviewCase(Base):
     # JSON structure describing the competing allocation candidates.
     competing_candidates: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Human-readable rationale for why the case was opened (LLM-phrased when it
+    # comes out of an investigation, empty otherwise).
+    decision_rationale: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # True when investigation proved the ledger contradicts itself (e.g. a
+    # claimed credit note was already consumed elsewhere).
+    contradiction_found: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False
+    )
     status: Mapped[ReviewCaseStatus] = mapped_column(
         Enum(ReviewCaseStatus), nullable=False, default=ReviewCaseStatus.pending
     )
