@@ -220,6 +220,10 @@ export default function PaymentDetail() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [processError, setProcessError] = useState<string | null>(null);
   const [processing, setProcessing] = useState(false);
+  // The candidate rows mount pending and transition to their verdict once a
+  // result is in hand (see the `.row-*` transitions in index.css) — so clicking
+  // "Process payment" eases into the outcome rather than snapping to it.
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
     setDetail(null);
@@ -231,6 +235,20 @@ export default function PaymentDetail() {
         setLoadError(err instanceof Error ? err.message : String(err)),
       );
   }, [id]);
+
+  const result = detail ? detailToResult(detail) : null;
+  const hasResult = result !== null;
+
+  useEffect(() => {
+    if (!hasResult) {
+      setRevealed(false);
+      return;
+    }
+    const raf = requestAnimationFrame(() =>
+      requestAnimationFrame(() => setRevealed(true)),
+    );
+    return () => cancelAnimationFrame(raf);
+  }, [hasResult]);
 
   const runProcess = useCallback(async () => {
     setProcessing(true);
@@ -265,7 +283,6 @@ export default function PaymentDetail() {
     );
   }
 
-  const result = detailToResult(detail);
   const investigation = result?.investigation ?? null;
 
   return (
@@ -323,7 +340,9 @@ export default function PaymentDetail() {
                 </thead>
                 <tbody>
                   {result.competing_candidates.map((c) => {
-                    const verdict = verdictFor(c, result);
+                    const verdict = revealed
+                      ? verdictFor(c, result)
+                      : "pending";
                     const status = VERDICT_STATUS[verdict];
                     return (
                       <tr key={c.invoice_id} className={VERDICT_ROW[verdict]}>
@@ -415,7 +434,7 @@ function OutcomeBanner({ result }: { result: ProcessResult }) {
 
 function BackLink() {
   return (
-    <Link to="/" className="text-sm text-ink/70 underline">
+    <Link to="/payments" className="text-sm text-ink/70 underline">
       ← Payments
     </Link>
   );
