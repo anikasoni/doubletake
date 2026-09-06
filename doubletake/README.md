@@ -31,6 +31,18 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+For development and running the tests, install the dev extras instead:
+
+```
+pip install -r requirements-dev.txt
+```
+
+## Run the tests
+
+```
+pytest
+```
+
 ## Run the API
 
 ```
