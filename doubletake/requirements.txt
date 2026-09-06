@@ -3,4 +3,5 @@ uvicorn
 sqlalchemy
 pydantic
 anthropic
+google-generativeai
 python-dotenv

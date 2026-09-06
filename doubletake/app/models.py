@@ -111,6 +111,10 @@ class ReviewCase(Base):
     payment_id: Mapped[str] = mapped_column(String, nullable=False)
     # JSON structure describing the competing allocation candidates.
     competing_candidates: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    # Evidence the investigator gathered before escalating -- same shape as
+    # ``Allocation.evidence_used``. Persisted so the payment-detail endpoint can
+    # replay the evidence trail without re-investigating.
+    evidence_checked: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     reason: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # Human-readable rationale for why the case was opened (LLM-phrased when it
     # comes out of an investigation, empty otherwise).

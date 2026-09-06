@@ -107,6 +107,9 @@ def process_payment(payment_id, db_session) -> dict:
         A summary dict describing what happened. Always contains ``payment_id``,
         ``path`` (``no_candidates`` / ``single_candidate`` / ``investigated``),
         ``outcome`` (``allocated`` / ``under_review``) and ``candidate_count``.
+        It also carries ``competing_candidates`` -- the serialised balancing
+        candidates that were weighed (empty on the ``no_candidates`` path) --
+        so callers can render the comparison without a second query.
     """
     payment = db_session.get(Payment, payment_id)
     if payment is None:
@@ -131,6 +134,7 @@ def process_payment(payment_id, db_session) -> dict:
             id=_review_case_id(payment_id),
             payment_id=payment_id,
             competing_candidates=[],
+            evidence_checked=[],
             reason=NO_CANDIDATE_REASON,
             decision_rationale="",
             contradiction_found=False,
@@ -148,6 +152,7 @@ def process_payment(payment_id, db_session) -> dict:
             "allocation_id": None,
             "review_case_id": review.id,
             "review_reason": NO_CANDIDATE_REASON,
+            "competing_candidates": [],
             "investigation": None,
         }
 
@@ -170,6 +175,7 @@ def process_payment(payment_id, db_session) -> dict:
             "selected_invoice_id": candidate.invoice_id,
             "allocation_id": allocation.id,
             "review_case_id": None,
+            "competing_candidates": [_candidate_dict(candidate)],
             "investigation": None,
         }
 
@@ -203,6 +209,7 @@ def process_payment(payment_id, db_session) -> dict:
             "selected_invoice_id": candidate.invoice_id,
             "allocation_id": allocation.id,
             "review_case_id": None,
+            "competing_candidates": [_candidate_dict(c) for c in candidates],
             "investigation": investigation_summary,
         }
 
@@ -211,6 +218,7 @@ def process_payment(payment_id, db_session) -> dict:
         id=_review_case_id(payment_id),
         payment_id=payment_id,
         competing_candidates=[_candidate_dict(c) for c in candidates],
+        evidence_checked=result.evidence_checked,
         reason=ESCALATION_REASON,
         decision_rationale=result.decision_rationale,
         contradiction_found=result.contradiction_found,
@@ -228,5 +236,6 @@ def process_payment(payment_id, db_session) -> dict:
         "allocation_id": None,
         "review_case_id": review.id,
         "review_reason": ESCALATION_REASON,
+        "competing_candidates": [_candidate_dict(c) for c in candidates],
         "investigation": investigation_summary,
     }

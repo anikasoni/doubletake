@@ -71,3 +71,51 @@ class ReviewCaseSchema(ORMModel):
     contradiction_found: bool
     status: ReviewCaseStatus
     created_at: datetime
+
+
+class CandidateSchema(BaseModel):
+    """One balancing allocation candidate -- the shape ``process_payment``
+    returns in ``competing_candidates`` and stores on a review case."""
+
+    invoice_id: str
+    match_type: str
+    credit_note_id: str | None = None
+
+
+class PaymentAllocationSchema(ORMModel):
+    """The applied allocation for a payment that resolved."""
+
+    invoice_id: str
+    amount: Decimal
+    evidence_used: list
+    decision_rationale: str
+
+
+class PaymentReviewCaseSchema(ORMModel):
+    """The open review case for a payment that escalated."""
+
+    competing_candidates: list
+    decision_rationale: str
+    contradiction_found: bool
+    evidence_checked: list
+    status: ReviewCaseStatus
+
+
+class PaymentDetailSchema(ORMModel):
+    """A payment plus -- once it has been processed -- the full investigation
+    detail the UI needs to reconstruct the candidate worksheet, evidence trail
+    and outcome banner without re-processing.
+
+    ``candidates`` is always the full set that was evaluated (winners and
+    losers); ``allocation`` is set iff the payment resolved; ``review_case`` is
+    set iff it escalated. For an ``unallocated`` payment all three are empty.
+    """
+
+    id: str
+    customer_id: str
+    amount: Decimal
+    received_date: date
+    status: PaymentStatus
+    candidates: list[CandidateSchema] = []
+    allocation: PaymentAllocationSchema | None = None
+    review_case: PaymentReviewCaseSchema | None = None

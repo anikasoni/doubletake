@@ -2,3 +2,4 @@
 
 pytest
 pytest-cov
+httpx  # required by fastapi.testclient.TestClient
