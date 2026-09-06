@@ -17,7 +17,7 @@ This module glues together the deterministic building blocks:
      :class:`~app.models.ReviewCase` is opened carrying the investigation's
      rationale, competing candidates and contradiction flag.
 
-The only external call in the whole path is the single Anthropic request made
+The only external call in the whole path is the single Gemini request made
 by the investigator to phrase its rationale; everything else is plain Python.
 """
 
