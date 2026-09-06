@@ -243,8 +243,10 @@ def investigate(
         outcome = {
             "status": "escalate",
             "selected_invoice_id": None,
-            # The remittance conflicts with every balancing candidate.
-            "contradiction_found": True,
+            # The remittance points outside the candidate set, but this is an
+            # unresolved conflict rather than a proven contradiction in the
+            # ledger, so it does not set contradiction_found.
+            "contradiction_found": False,
             "reason": "remittance_references_invoice_with_no_candidate",
         }
         return _finish(payment, candidates, evidence_checked, outcome)

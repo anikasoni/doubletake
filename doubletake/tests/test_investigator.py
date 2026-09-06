@@ -180,6 +180,43 @@ def test_cust04_escalates_on_missing_remittance(db_session, anthropic_stub):
     assert ra_evidence["found"] is False
 
 
+def test_escalates_without_contradiction_when_remittance_names_non_candidate(
+    db_session, anthropic_stub
+):
+    # PAY-401 has candidates INV-401 / INV-402; point its remittance at an
+    # invoice that is not a candidate at all.
+    db_session.add(
+        models.RemittanceAdvice(
+            id="RA-401",
+            payment_id="PAY-401",
+            referenced_invoice_id="INV-999",
+            referenced_credit_note_id=None,
+            raw_text="Remittance for PAY-401: settles INV-999.",
+        )
+    )
+    db_session.commit()
+
+    anthropic_stub["text"] = (
+        "The remittance advice names an invoice that is not one of the balancing "
+        "candidates, so the intended allocation cannot be confirmed and the case "
+        "is escalated."
+    )
+    payment, candidates = _payment_and_candidates(db_session, "PAY-401")
+    assert len(candidates) > 1
+
+    result = investigate(payment, candidates, db_session)
+
+    assert result.status == "escalate"
+    assert result.selected_invoice_id is None
+    assert result.contradiction_found is False
+    assert len(anthropic_stub["calls"]) == 1
+
+    evidence_types = [e["evidence_type"] for e in result.evidence_checked]
+    assert evidence_types == ["remittance_advice"]
+    assert result.evidence_checked[0]["found"] is True
+    assert result.evidence_checked[0]["referenced_invoice_id"] == "INV-999"
+
+
 # --------------------------------------------------------------------------- #
 # Building blocks                                                             #
 # --------------------------------------------------------------------------- #
