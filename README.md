@@ -1,4 +1,4 @@
-# doubletake
+# Doubletake
 
 ## The problem
 
