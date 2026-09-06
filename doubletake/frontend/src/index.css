@@ -1,0 +1,69 @@
+/* Fonts: Source Serif 4 (headings / numeric displays, weight 600) and
+   IBM Plex Sans (body, labels, UI chrome). Lora is the documented fallback
+   for the serif if Source Serif 4 fails to load. */
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Lora:wght@600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    /* Sentence case throughout — no all-caps, no letter-spacing tricks. */
+    font-feature-settings: "kern" 1;
+    letter-spacing: normal;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif text-ink;
+    font-weight: 600;
+    letter-spacing: normal;
+  }
+
+  /* Amounts and other numeric values: tabular figures so columns align. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+}
+
+@layer components {
+  /* A worksheet section separated by a single hairline rule, no shadow. */
+  .panel {
+    @apply border border-rule bg-paper-raised rounded;
+  }
+
+  /* Worksheet table — hairline rules between rows, never a card grid. */
+  .worksheet {
+    @apply w-full border-collapse text-sm;
+  }
+  .worksheet th {
+    @apply border-b border-rule px-3 py-2 text-left font-sans font-medium text-ink/70;
+  }
+  .worksheet td {
+    @apply border-b border-rule px-3 py-2 align-top;
+  }
+  .worksheet td.amount {
+    @apply text-right tnum;
+  }
+
+  /* Persistent (not hover-only) row state for candidate rows. */
+  .row-accepted {
+    border-left: 3px solid theme("colors.signal-resolved");
+  }
+  .row-rejected {
+    border-left: 3px solid theme("colors.signal-alert");
+    color: theme("colors.ink / 55%");
+  }
+  .row-pending {
+    border-left: 3px solid theme("colors.signal-pending");
+  }
+}
