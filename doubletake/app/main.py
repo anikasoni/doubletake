@@ -3,9 +3,11 @@
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy.orm import Session
 
-from app.db import init_db
+from app.db import get_db, init_db
+from app.workflow import process_payment
 
 # Make the ``scripts`` package importable (it lives next to ``app``).
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -37,3 +39,14 @@ def seed() -> dict:
         )
     counts = seed_database(DEFAULT_CASE)
     return {"status": "seeded", "source": DEFAULT_CASE.name, "counts": counts}
+
+
+@app.post("/payments/{payment_id}/process")
+def process_payment_endpoint(
+    payment_id: str, db: Session = Depends(get_db)
+) -> dict:
+    """Run the allocation workflow for one payment and return a summary."""
+    try:
+        return process_payment(payment_id, db)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
