@@ -12,7 +12,7 @@ Compare the possibilities. Check the supporting records. Explain the outcome.
 ### 🚀 Live Demo
 
 - **Frontend:** [DoubleTake on Vercel](https://doubletake-sand.vercel.app/)
-- **Backend API:** [DoubleTake API on Railway](https://doubletake-production.up.railway.app/)
+- **Backend API:** [DoubleTake API on Railway](https://doubletake-production.up.railway.app/docs)
 - **API Docs:** [FastAPI Swagger Docs](https://doubletake-production.up.railway.app/docs)
 
 
